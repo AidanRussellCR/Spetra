@@ -2,6 +2,9 @@ add_library(spetra STATIC
     src/game.cpp
     src/window.cpp
     src/color.cpp
+    src/input.cpp
+    src/timer.cpp
+    src/scene_manager.cpp
 )
 
 target_include_directories(spetra
