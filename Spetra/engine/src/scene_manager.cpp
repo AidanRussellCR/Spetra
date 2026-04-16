@@ -22,13 +22,13 @@ namespace spetra {
 
     void SceneManager::handle_input(Input& input) {
         if (m_current_scene) {
-            m_current_scene->handle_input(input);
+            m_current_scene->handle_input(input, *this);
         }
     }
 
     void SceneManager::update(double delta_time) {
         if (m_current_scene) {
-            m_current_scene->update(delta_time);
+            m_current_scene->update(delta_time, *this);
         }
     }
 

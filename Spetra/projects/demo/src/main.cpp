@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "color_scene.hpp"
+#include "blue_scene.hpp"
 #include "spetra/game.hpp"
 #include "spetra/config.hpp"
 
@@ -13,11 +13,7 @@ int main() {
 
     spetra::Game game(config);
 
-    game.set_starting_scene(
-        std::make_unique<ColorScene>(
-            spetra::Color{120, 24, 40, 255}
-        )
-    );
+    game.set_starting_scene(std::make_unique<BlueScene>());
 
     return game.run();
 }

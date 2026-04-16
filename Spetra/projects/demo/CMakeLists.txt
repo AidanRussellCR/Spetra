@@ -1,6 +1,7 @@
 add_executable(demo
     src/main.cpp
-    src/color_scene.cpp
+    src/blue_scene.cpp
+    src/red_scene.cpp
 )
 
 target_include_directories(demo
