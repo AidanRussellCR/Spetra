@@ -26,7 +26,7 @@ namespace spetra {
             return false;
         }
 
-        if (!m_window.create(m_config.title, m_config.width, m_config.height)) {
+        if (!m_window.create(m_config.title, m_config.window_width, m_config.window_height, m_config.render_width, m_config.render_height)) {
             SDL_Quit();
             return false;
         }
