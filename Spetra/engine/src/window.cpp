@@ -66,6 +66,23 @@ namespace spetra {
         SDL_RenderPresent(m_renderer);
     }
 
+    bool Window::draw_filled_rect(const Color& color, int x, int y, int w, int h) {
+        if (!m_renderer) {
+            return false;
+        }
+
+        SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
+
+        SDL_FRect rect{
+            static_cast<float>(x),
+            static_cast<float>(y),
+            static_cast<float>(w),
+            static_cast<float>(h)
+        };
+
+        return SDL_RenderFillRect(m_renderer, &rect);
+    }
+
     bool Window::draw_texture_region(const Texture& texture, int src_x, int src_y, int src_w, int src_h, int dst_x, int dst_y, int dst_w, int dst_h) {
         if (!m_renderer || !texture.is_valid()) {
             return false;

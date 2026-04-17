@@ -17,16 +17,63 @@ void MapScene::on_enter() {
     if (!is_valid_tile_size(resolved_tile_size)) {
         std::cerr << "Invalid tile size. Must be positive and even.\n";
     }
+
+    // Add player around the center of the map
+    int map_pixel_width = m_config.map_width * resolved_tile_size;
+    int map_pixel_height = m_config.map_height * resolved_tile_size;
+
+    m_player_x = static_cast<float>((map_pixel_width - m_player_size) / 2);
+    m_player_y = static_cast<float>((map_pixel_height - m_player_size) / 2);
 }
 
 void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_manager) {
-    (void)input;
     (void)scene_manager;
+
+    m_move_left = input.is_down(SDL_SCANCODE_LEFT) || input.is_down(SDL_SCANCODE_A);
+    m_move_right = input.is_down(SDL_SCANCODE_RIGHT) || input.is_down(SDL_SCANCODE_D);
+    m_move_up = input.is_down(SDL_SCANCODE_UP) || input.is_down(SDL_SCANCODE_W);
+    m_move_down = input.is_down(SDL_SCANCODE_DOWN) || input.is_down(SDL_SCANCODE_S);
 }
 
 void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
-    (void)delta_time;
     (void)scene_manager;
+
+    float move_x = 0.0f;
+    float move_y = 0.0f;
+
+    if (m_move_left) {
+        move_x -= 1.0f;
+    }
+    if (m_move_right) {
+        move_x += 1.0f;
+    }
+    if (m_move_up) {
+        move_y -= 1.0f;
+    }
+    if (m_move_down) {
+        move_y += 1.0f;
+    }
+
+    // Normalize diagonals so player isn't too fast
+    if (move_x != 0.0f && move_y != 0.0f) {
+        constexpr float diagonal_scale = 0.70710678f;
+        move_x *= diagonal_scale;
+        move_y *= diagonal_scale;
+    }
+
+    m_player_x += move_x * m_player_speed * static_cast<float>(delta_time);
+    m_player_y += move_y * m_player_speed * static_cast<float>(delta_time);
+
+    int resolved_tile_size = tile_size();
+    int map_pixel_width = m_config.map_width * resolved_tile_size;
+    int map_pixel_height = m_config.map_height * resolved_tile_size;
+
+    // Clamp player to map bounds
+    float max_x = static_cast<float>(std::max(0, map_pixel_width - m_player_size));
+    float max_y = static_cast<float>(std::max(0, map_pixel_height - m_player_size));
+
+    m_player_x = std::clamp(m_player_x, 0.0f, max_x);
+    m_player_y = std::clamp(m_player_y, 0.0f, max_y);
 }
 
 void MapScene::render(spetra::Window& window) {
@@ -37,8 +84,11 @@ void MapScene::render(spetra::Window& window) {
 
         if (!m_tileset.load_from_file(window.renderer(), full_path)) {
             std::cerr << "Failed to load tileset: " << full_path << '\n';
+            window.present();
             return;
         }
+
+        std::cout << "Loaded tileset: " << full_path << " (" << m_tileset.width() << "x" << m_tileset.height() << ")\n";
 
         m_loaded = true;
     }
@@ -99,6 +149,18 @@ void MapScene::render(spetra::Window& window) {
             );
         }
     }
+
+    // Draw player
+    int player_screen_x = static_cast<int>(m_player_x) - camera_x;
+    int player_screen_y = static_cast<int>(m_player_y) - camera_y;
+
+    window.draw_filled_rect(
+        m_player_color,
+        player_screen_x,
+        player_screen_y,
+        m_player_size,
+        m_player_size
+    );
 
     window.present();
 }
