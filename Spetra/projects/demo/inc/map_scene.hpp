@@ -38,4 +38,15 @@ private:
     Config m_config;
     spetra::Texture m_tileset;
     bool m_loaded = false;
+
+    float m_player_x = 0.0f;
+    float m_player_y = 0.0f;
+    int m_player_size = 12;
+    float m_player_speed = 80.0f;
+    spetra::Color m_player_color{255, 220, 120, 255};
+
+    bool m_move_left = false;
+    bool m_move_right = false;
+    bool m_move_up = false;
+    bool m_move_down = false;
 };
