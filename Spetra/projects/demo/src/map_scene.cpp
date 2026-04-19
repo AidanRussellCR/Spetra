@@ -61,10 +61,41 @@ void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
         move_y *= diagonal_scale;
     }
 
-    m_player_x += move_x * m_player_speed * static_cast<float>(delta_time);
-    m_player_y += move_y * m_player_speed * static_cast<float>(delta_time);
+    float dx = move_x * m_player_speed * static_cast<float>(delta_time);
+    float dy = move_y * m_player_speed * static_cast<float>(delta_time);
 
     int resolved_tile_size = tile_size();
+
+    // X Movement
+    float new_x = m_player_x + dx;
+
+    int left_tile = static_cast<int>(new_x) / resolved_tile_size;
+    int right_tile = static_cast<int>(new_x + m_player_size - 1) / resolved_tile_size;
+    int top_tile = static_cast<int>(m_player_y) / resolved_tile_size;
+    int bottom_tile = static_cast<int>(m_player_y + m_player_size - 1) / resolved_tile_size;
+
+    if (!is_tile_blocked(left_tile, top_tile) &&
+        !is_tile_blocked(left_tile, bottom_tile) &&
+        !is_tile_blocked(right_tile, top_tile) &&
+        !is_tile_blocked(right_tile, bottom_tile)) {
+        m_player_x = new_x;
+    }
+
+    // Y Movement
+    float new_y = m_player_y + dy;
+
+    left_tile = static_cast<int>(m_player_x) / resolved_tile_size;
+    right_tile = static_cast<int>(m_player_x + m_player_size - 1) / resolved_tile_size;
+    top_tile = static_cast<int>(new_y) / resolved_tile_size;
+    bottom_tile = static_cast<int>(new_y + m_player_size - 1) / resolved_tile_size;
+
+    if (!is_tile_blocked(left_tile, top_tile) &&
+        !is_tile_blocked(left_tile, bottom_tile) &&
+        !is_tile_blocked(right_tile, top_tile) &&
+        !is_tile_blocked(right_tile, bottom_tile)) {
+        m_player_y = new_y;
+        }
+
     int map_pixel_width = m_config.map_width * resolved_tile_size;
     int map_pixel_height = m_config.map_height * resolved_tile_size;
 
@@ -175,4 +206,20 @@ int MapScene::tile_size() const {
 
 bool MapScene::is_valid_tile_size(int size) const {
     return size > 0 && (size % 2 == 0);
+}
+
+bool MapScene::is_tile_blocked(int tile_x, int tile_y) const {
+    if (tile_x < 0 || tile_y < 0 ||
+        tile_x >= m_config.map_width ||
+        tile_y >= m_config.map_height) {
+        return true; // treat region outside map as solid
+    }
+
+    int index = tile_y * m_config.map_width + tile_x;
+
+    if (index < 0 || index >= static_cast<int>(m_config.collision.size())) {
+        return false;
+    }
+
+    return m_config.collision[index] != 0;
 }

@@ -16,6 +16,8 @@ public:
         int map_height = 0;
         std::vector<int> tiles;
 
+	std::vector<int>collision;
+
         int default_tile_size = 16;
         std::optional<int> tile_size_override;
 
@@ -33,6 +35,7 @@ public:
 private:
     int tile_size() const;
     bool is_valid_tile_size(int size) const;
+    bool is_tile_blocked(int tile_x, int tile_y) const;
 
 private:
     Config m_config;
