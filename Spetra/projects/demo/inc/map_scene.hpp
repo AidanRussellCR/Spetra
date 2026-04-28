@@ -7,20 +7,12 @@
 #include "spetra/color.hpp"
 #include "spetra/scene.hpp"
 #include "spetra/texture.hpp"
+#include "map_data.hpp"
 
 class MapScene : public spetra::Scene {
 public:
     struct Config {
-        std::string tileset_path;
-        int map_width = 0;
-        int map_height = 0;
-        std::vector<int> tiles;
-
-	std::vector<int>collision;
-
-        int default_tile_size = 16;
-        std::optional<int> tile_size_override;
-
+        MapData map;
         spetra::Color clear_color{0, 0, 0, 255};
     };
 

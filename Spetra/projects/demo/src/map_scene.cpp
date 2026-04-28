@@ -19,8 +19,8 @@ void MapScene::on_enter() {
     }
 
     // Add player around the center of the map
-    int map_pixel_width = m_config.map_width * resolved_tile_size;
-    int map_pixel_height = m_config.map_height * resolved_tile_size;
+    int map_pixel_width = m_config.map.width * resolved_tile_size;
+    int map_pixel_height = m_config.map.height * resolved_tile_size;
 
     m_player_x = static_cast<float>((map_pixel_width - m_player_size) / 2);
     m_player_y = static_cast<float>((map_pixel_height - m_player_size) / 2);
@@ -96,8 +96,8 @@ void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
         m_player_y = new_y;
         }
 
-    int map_pixel_width = m_config.map_width * resolved_tile_size;
-    int map_pixel_height = m_config.map_height * resolved_tile_size;
+    int map_pixel_width = m_config.map.width * resolved_tile_size;
+    int map_pixel_height = m_config.map.height * resolved_tile_size;
 
     // Clamp player to map bounds
     float max_x = static_cast<float>(std::max(0, map_pixel_width - m_player_size));
@@ -111,7 +111,7 @@ void MapScene::render(spetra::Window& window) {
     window.clear(m_config.clear_color);
 
     if (!m_loaded) {
-        std::string full_path = spetra::get_asset_path(m_config.tileset_path);
+        std::string full_path = spetra::get_asset_path(m_config.map.tileset_path);
 
         if (!m_tileset.load_from_file(window.renderer(), full_path)) {
             std::cerr << "Failed to load tileset: " << full_path << '\n';
@@ -130,12 +130,12 @@ void MapScene::render(spetra::Window& window) {
         return;
     }
 
-    if (m_config.map_width <= 0 || m_config.map_height <= 0) {
+    if (m_config.map.width <= 0 || m_config.map.height <= 0) {
         window.present();
         return;
     }
 
-    if (static_cast<int>(m_config.tiles.size()) != m_config.map_width * m_config.map_height) {
+    if (static_cast<int>(m_config.map.layers[0].tiles.size()) != m_config.map.width * m_config.map.height) {
         window.present();
         return;
     }
@@ -146,15 +146,15 @@ void MapScene::render(spetra::Window& window) {
         return;
     }
 
-    int map_pixel_width = m_config.map_width * resolved_tile_size;
-    int map_pixel_height = m_config.map_height * resolved_tile_size;
+    int map_pixel_width = m_config.map.width * resolved_tile_size;
+    int map_pixel_height = m_config.map.height * resolved_tile_size;
 
     int camera_x = std::max(0, (map_pixel_width - window.render_width()) / 2);
     int camera_y = std::max(0, (map_pixel_height - window.render_height()) / 2);
 
-    for (int y = 0; y < m_config.map_height; ++y) {
-        for (int x = 0; x < m_config.map_width; ++x) {
-            int tile_index = m_config.tiles[y * m_config.map_width + x];
+    for (int y = 0; y < m_config.map.height; ++y) {
+        for (int x = 0; x < m_config.map.width; ++x) {
+            int tile_index = m_config.map.layers[0].tiles[y * m_config.map.width + x];
             if (tile_index < 0) {
                 continue;
             }
@@ -197,11 +197,11 @@ void MapScene::render(spetra::Window& window) {
 }
 
 int MapScene::tile_size() const {
-    if (m_config.tile_size_override.has_value()) {
-        return *m_config.tile_size_override;
+    if (m_config.map.tile_size_override.has_value()) {
+        return *m_config.map.tile_size_override;
     }
 
-    return m_config.default_tile_size;
+    return m_config.map.default_tile_size;
 }
 
 bool MapScene::is_valid_tile_size(int size) const {
@@ -210,16 +210,16 @@ bool MapScene::is_valid_tile_size(int size) const {
 
 bool MapScene::is_tile_blocked(int tile_x, int tile_y) const {
     if (tile_x < 0 || tile_y < 0 ||
-        tile_x >= m_config.map_width ||
-        tile_y >= m_config.map_height) {
+        tile_x >= m_config.map.width ||
+        tile_y >= m_config.map.height) {
         return true; // treat region outside map as solid
     }
 
-    int index = tile_y * m_config.map_width + tile_x;
+    int index = tile_y * m_config.map.width + tile_x;
 
-    if (index < 0 || index >= static_cast<int>(m_config.collision.size())) {
+    if (index < 0 || index >= static_cast<int>(m_config.map.collision.cells.size())) {
         return false;
     }
 
-    return m_config.collision[index] != 0;
+    return m_config.map.collision.cells[index] != 0;
 }
