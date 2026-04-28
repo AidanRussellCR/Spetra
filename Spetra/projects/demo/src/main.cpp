@@ -24,36 +24,51 @@ int main() {
 
     spetra::Game game(config);
 
-    MapScene::Config map_config;
-    map_config.tileset_path = "assets/tileset.png";
-    map_config.map_width = 12;
-    map_config.map_height = 8;
-    map_config.default_tile_size = demo::ProjectSettings::default_tile_size;
-    map_config.clear_color = {0, 0, 0, 255};
+    MapData map;
 
-    map_config.tiles = {
-        0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
-        4, 5, 6, 7, 4, 5, 6, 7, 4, 5, 6, 7,
-        0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
-        4, 5, 6, 7, 4, 5, 6, 7, 4, 5, 6, 7,
-        0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
-        4, 5, 6, 7, 4, 5, 6, 7, 4, 5, 6, 7,
-        0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
-        4, 5, 6, 7, 4, 5, 6, 7, 4, 5, 6, 7
+    map.width = 12;
+    map.height = 8;
+    map.tileset_path = "assets/tileset.png";
+    map.default_tile_size = demo::ProjectSettings::default_tile_size;
+
+    // Tile Layer
+    TileLayer ground;
+    ground.name = "Ground";
+
+    ground.tiles = {
+        0,1,2,3,0,1,2,3,0,1,2,3,
+        4,5,6,7,4,5,6,7,4,5,6,7,
+        0,1,2,3,0,1,2,3,0,1,2,3,
+        4,5,6,7,4,5,6,7,4,5,6,7,
+        0,1,2,3,0,1,2,3,0,1,2,3,
+        4,5,6,7,4,5,6,7,4,5,6,7,
+        0,1,2,3,0,1,2,3,0,1,2,3,
+        4,5,6,7,4,5,6,7,4,5,6,7
     };
 
-    map_config.collision = {
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    map.layers.push_back(ground);
+
+    // Collision
+    map.collision.cells = {
+        1,1,1,1,1,1,1,1,1,1,1,1,
+        1,1,0,0,0,0,0,0,0,0,1,1,
+        1,0,0,0,0,0,0,0,0,0,0,1,
+        1,0,0,0,0,0,0,0,0,0,0,1,
+        1,0,0,0,0,0,0,0,0,0,0,1,
+        1,0,0,0,0,0,0,0,0,0,0,1,
+        1,1,0,0,0,0,0,0,0,0,1,1,
+        1,1,1,1,1,1,1,1,1,1,1,1
     };
 
-    game.set_starting_scene(std::make_unique<MapScene>(map_config));
+    map.spawn_x = 64;
+    map.spawn_y = 64;
+
+    // MapScene config
+    MapScene::Config map_scene_config;
+    map_scene_config.map = map;
+    map_scene_config.clear_color = {0,0,0,255};
+
+    game.set_starting_scene(std::make_unique<MapScene>(map_scene_config));
 
     return game.run();
 }
