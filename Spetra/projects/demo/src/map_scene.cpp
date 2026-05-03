@@ -33,6 +33,10 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
     m_move_right = input.is_down(SDL_SCANCODE_RIGHT) || input.is_down(SDL_SCANCODE_D);
     m_move_up = input.is_down(SDL_SCANCODE_UP) || input.is_down(SDL_SCANCODE_W);
     m_move_down = input.is_down(SDL_SCANCODE_DOWN) || input.is_down(SDL_SCANCODE_S);
+
+    if (input.was_pressed(SDL_SCANCODE_F1)) {
+        m_show_collision_debug = !m_show_collision_debug;
+    }
 }
 
 void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
@@ -135,9 +139,12 @@ void MapScene::render(spetra::Window& window) {
         return;
     }
 
-    if (static_cast<int>(m_config.map.layers[0].tiles.size()) != m_config.map.width * m_config.map.height) {
-        window.present();
-        return;
+    for (const TileLayer& layer : m_config.map.layers) {
+        if (static_cast<int>(layer.tiles.size()) != m_config.map.width * m_config.map.height) {
+            std::cerr << "Invalid tile layer size: " << layer.name << '\n';
+            window.present();
+            return;
+        }
     }
 
     int tileset_columns = m_tileset.width() / resolved_tile_size;
@@ -152,32 +159,75 @@ void MapScene::render(spetra::Window& window) {
     int camera_x = std::max(0, (map_pixel_width - window.render_width()) / 2);
     int camera_y = std::max(0, (map_pixel_height - window.render_height()) / 2);
 
-    for (int y = 0; y < m_config.map.height; ++y) {
-        for (int x = 0; x < m_config.map.width; ++x) {
-            int tile_index = m_config.map.layers[0].tiles[y * m_config.map.width + x];
-            if (tile_index < 0) {
-                continue;
+    // Draw tiles (layers)
+    for (const TileLayer& layer : m_config.map.layers) {
+        if (!layer.visible) {
+            continue;
+        }
+
+        for (int y = 0; y < m_config.map.height; ++y) {
+            for (int x = 0; x < m_config.map.width; ++x) {
+                int tile_index = layer.tiles[y * m_config.map.width + x];
+                if (tile_index < 0) {
+                    continue;
+                }
+
+                int src_x = (tile_index % tileset_columns) * resolved_tile_size;
+                int src_y = (tile_index / tileset_columns) * resolved_tile_size;
+
+                int dst_x = x * resolved_tile_size - camera_x;
+                int dst_y = y * resolved_tile_size - camera_y;
+
+                if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
+                    continue;
+                }
+
+                if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
+                    continue;
+                }
+
+                window.draw_texture_region(
+                    m_tileset,
+                    src_x, src_y, resolved_tile_size, resolved_tile_size,
+                    dst_x, dst_y, resolved_tile_size, resolved_tile_size
+                );
             }
+        }
+    }
 
-            int src_x = (tile_index % tileset_columns) * resolved_tile_size;
-            int src_y = (tile_index / tileset_columns) * resolved_tile_size;
+    // DEBUG - show collision
+    if (m_show_collision_debug) {
+        for (int y = 0; y < m_config.map.height; ++y) {
+            for (int x = 0; x < m_config.map.width; ++x) {
+                int index = y * m_config.map.width + x;
 
-            int dst_x = x * resolved_tile_size - camera_x;
-            int dst_y = y * resolved_tile_size - camera_y;
+                if (index < 0 || index >= static_cast<int>(m_config.map.collision.cells.size())) {
+                    continue;
+                }
 
-            if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
-                continue;
+                if (m_config.map.collision.cells[index] == 0) {
+                    continue;
+                }
+
+                int dst_x = x * resolved_tile_size - camera_x;
+                int dst_y = y * resolved_tile_size - camera_y;
+
+                if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
+                    continue;
+                }
+
+                if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
+                    continue;
+                }
+
+                window.draw_filled_rect(
+                    spetra::Color{255, 0, 0, 100},
+                    dst_x,
+                    dst_y,
+                    resolved_tile_size,
+                    resolved_tile_size
+                );
             }
-
-            if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
-                continue;
-            }
-
-            window.draw_texture_region(
-                m_tileset,
-                src_x, src_y, resolved_tile_size, resolved_tile_size,
-                dst_x, dst_y, resolved_tile_size, resolved_tile_size
-            );
         }
     }
 
