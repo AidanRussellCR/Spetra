@@ -44,4 +44,7 @@ private:
     bool m_move_right = false;
     bool m_move_up = false;
     bool m_move_down = false;
+
+    // DEBUG
+    bool m_show_collision_debug = false;
 };
