@@ -17,10 +17,11 @@ While not intending to compete per say with other engines out there, Spetra is b
 - Player movement (delta-time based)
 - Tile-based collision system
 - Camera (still very basic)
+- Map loading
 
 ## Roadmap
-- Map System
-- Map loading/saving
+- Improved map System
+- Improved map loading/saving
 - Map Editor
 - Camera follow + smoothing
 - Tile-based interaction triggers

@@ -22,8 +22,8 @@ void MapScene::on_enter() {
     int map_pixel_width = m_config.map.width * resolved_tile_size;
     int map_pixel_height = m_config.map.height * resolved_tile_size;
 
-    m_player_x = static_cast<float>((map_pixel_width - m_player_size) / 2);
-    m_player_y = static_cast<float>((map_pixel_height - m_player_size) / 2);
+    m_player_x = m_config.map.spawn_x;
+    m_player_y = m_config.map.spawn_y;
 }
 
 void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_manager) {
@@ -156,8 +156,10 @@ void MapScene::render(spetra::Window& window) {
     int map_pixel_width = m_config.map.width * resolved_tile_size;
     int map_pixel_height = m_config.map.height * resolved_tile_size;
 
-    int camera_x = std::max(0, (map_pixel_width - window.render_width()) / 2);
-    int camera_y = std::max(0, (map_pixel_height - window.render_height()) / 2);
+    update_camera(window);
+
+    int camera_x = static_cast<int>(m_camera_x);
+    int camera_y = static_cast<int>(m_camera_y);
 
     // Draw tiles (layers)
     for (const TileLayer& layer : m_config.map.layers) {
@@ -244,6 +246,34 @@ void MapScene::render(spetra::Window& window) {
     );
 
     window.present();
+}
+
+void MapScene::update_camera(const spetra::Window& window) {
+    int resolved_tile_size = tile_size();
+
+    int map_pixel_width = m_config.map.width * resolved_tile_size;
+    int map_pixel_height = m_config.map.height * resolved_tile_size;
+
+    if (m_camera_mode == CameraMode::FollowPlayer) {
+        m_camera_x =
+        m_player_x +
+        static_cast<float>(m_player_size) / 2.0f -
+        static_cast<float>(window.render_width()) / 2.0f;
+
+        m_camera_y =
+        m_player_y +
+        static_cast<float>(m_player_size) / 2.0f -
+        static_cast<float>(window.render_height()) / 2.0f;
+    }
+
+    float max_camera_x =
+    static_cast<float>(std::max(0, map_pixel_width - window.render_width()));
+
+    float max_camera_y =
+    static_cast<float>(std::max(0, map_pixel_height - window.render_height()));
+
+    m_camera_x = std::clamp(m_camera_x, 0.0f, max_camera_x);
+    m_camera_y = std::clamp(m_camera_y, 0.0f, max_camera_y);
 }
 
 int MapScene::tile_size() const {

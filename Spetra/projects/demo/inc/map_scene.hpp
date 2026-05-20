@@ -9,6 +9,12 @@
 #include "spetra/texture.hpp"
 #include "map_data.hpp"
 
+enum class CameraMode {
+    FollowPlayer,
+    Manual,
+    Cutscene
+};
+
 class MapScene : public spetra::Scene {
 public:
     struct Config {
@@ -28,6 +34,7 @@ private:
     int tile_size() const;
     bool is_valid_tile_size(int size) const;
     bool is_tile_blocked(int tile_x, int tile_y) const;
+    void update_camera(const spetra::Window& window);
 
 private:
     Config m_config;
@@ -39,6 +46,10 @@ private:
     int m_player_size = 12;
     float m_player_speed = 80.0f;
     spetra::Color m_player_color{255, 220, 120, 255};
+
+    float m_camera_x = 0.0f;
+    float m_camera_y = 0.0f;
+    CameraMode m_camera_mode = CameraMode::FollowPlayer;
 
     bool m_move_left = false;
     bool m_move_right = false;
