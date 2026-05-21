@@ -65,6 +65,34 @@ void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
         move_y *= diagonal_scale;
     }
 
+    bool is_moving = move_x != 0.0f || move_y != 0.0f;
+
+    if (move_y > 0.0f) {
+        m_player_direction = 0; // down
+    }
+    else if (move_x < 0.0f) {
+        m_player_direction = 1; // left
+    }
+    else if (move_x > 0.0f) {
+        m_player_direction = 2; // right
+    }
+    else if (move_y < 0.0f) {
+        m_player_direction = 3; // up
+    }
+
+    if (is_moving) {
+        m_walk_anim_timer += delta_time;
+
+        if (m_walk_anim_timer >= m_walk_anim_frame_time) {
+            m_walk_anim_timer = 0.0;
+            m_player_frame = (m_player_frame + 1) % 4;
+        }
+    }
+    else {
+        m_walk_anim_timer = 0.0;
+        m_player_frame = 0;
+    }
+
     float dx = move_x * m_player_speed * static_cast<float>(delta_time);
     float dy = move_y * m_player_speed * static_cast<float>(delta_time);
 
@@ -126,6 +154,21 @@ void MapScene::render(spetra::Window& window) {
         std::cout << "Loaded tileset: " << full_path << " (" << m_tileset.width() << "x" << m_tileset.height() << ")\n";
 
         m_loaded = true;
+    }
+
+    if (!m_player_texture_loaded) {
+        std::string full_path = spetra::get_asset_path(m_player_sprite_path);
+
+        if (!m_player_texture.load_from_file(window.renderer(), full_path)) {
+            std::cerr << "Failed to load player sprite: " << full_path << '\n';
+        }
+        else {
+            std::cout << "Loaded player sprite: " << full_path
+            << " (" << m_player_texture.width()
+            << "x" << m_player_texture.height() << ")\n";
+
+            m_player_texture_loaded = true;
+        }
     }
 
     int resolved_tile_size = tile_size();
@@ -237,13 +280,31 @@ void MapScene::render(spetra::Window& window) {
     int player_screen_x = static_cast<int>(m_player_x) - camera_x;
     int player_screen_y = static_cast<int>(m_player_y) - camera_y;
 
-    window.draw_filled_rect(
-        m_player_color,
-        player_screen_x,
-        player_screen_y,
-        m_player_size,
-        m_player_size
-    );
+    if (m_player_texture_loaded) {
+        int src_x = m_player_frame * m_player_frame_width;
+        int src_y = m_player_direction * m_player_frame_height;
+
+        window.draw_texture_region(
+            m_player_texture,
+            src_x,
+            src_y,
+            m_player_frame_width,
+            m_player_frame_height,
+            player_screen_x,
+            player_screen_y,
+            m_player_frame_width,
+            m_player_frame_height
+        );
+    }
+    else {
+        window.draw_filled_rect(
+            m_player_color,
+            player_screen_x,
+            player_screen_y,
+            m_player_size,
+            m_player_size
+        );
+    }
 
     window.present();
 }

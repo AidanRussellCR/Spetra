@@ -47,6 +47,20 @@ private:
     float m_player_speed = 80.0f;
     spetra::Color m_player_color{255, 220, 120, 255};
 
+    spetra::Texture m_player_texture;
+    bool m_player_texture_loaded = false;
+
+    std::string m_player_sprite_path = "assets/sprites/player.png";
+
+    int m_player_frame_width = 16;
+    int m_player_frame_height = 16;
+
+    int m_player_direction = 0; // 0 down, 1 left, 2 right, 3 up
+    int m_player_frame = 0;
+
+    double m_walk_anim_timer = 0.0;
+    double m_walk_anim_frame_time = 0.15;
+
     float m_camera_x = 0.0f;
     float m_camera_y = 0.0f;
     CameraMode m_camera_mode = CameraMode::FollowPlayer;
