@@ -7,6 +7,7 @@
 #include "spetra/color.hpp"
 #include "spetra/scene.hpp"
 #include "spetra/texture.hpp"
+#include "spetra/dialogue_box.hpp"
 #include "map_data.hpp"
 
 enum class CameraMode {
@@ -40,6 +41,8 @@ private:
     Config m_config;
     spetra::Texture m_tileset;
     bool m_loaded = false;
+
+    spetra::DialogueBox m_dialogue_box;
 
     float m_player_x = 0.0f;
     float m_player_y = 0.0f;

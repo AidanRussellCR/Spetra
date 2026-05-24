@@ -24,6 +24,9 @@ void MapScene::on_enter() {
 
     m_player_x = m_config.map.spawn_x;
     m_player_y = m_config.map.spawn_y;
+
+    m_dialogue_box.set_skin_path("assets/ui/textbox.png", 6);
+    m_dialogue_box.set_font_path("assets/fonts/dialogue.ttf", 12.0f);
 }
 
 void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_manager) {
@@ -37,10 +40,32 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
     if (input.was_pressed(SDL_SCANCODE_F1)) {
         m_show_collision_debug = !m_show_collision_debug;
     }
+
+    if (input.was_pressed(SDL_SCANCODE_E) || input.was_pressed(SDL_SCANCODE_RETURN)) {
+        if (m_dialogue_box.is_active()) {
+            m_dialogue_box.advance();
+        }
+        else {
+            m_dialogue_box.start({
+                {"Speaker 1", "This is the initial test of Spetra's dialogue system."},
+                {"Speaker 2", "Speaker names can change between dialogue sections."},
+                {"", "Narration can appear without a speaker name as well."}
+            });
+        }
+    }
+
+    if (m_dialogue_box.is_active()) {
+        m_move_left = false;
+        m_move_right = false;
+        m_move_up = false;
+        m_move_down = false;
+    }
 }
 
 void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
     (void)scene_manager;
+
+    m_dialogue_box.update(delta_time);
 
     float move_x = 0.0f;
     float move_y = 0.0f;
@@ -305,6 +330,8 @@ void MapScene::render(spetra::Window& window) {
             m_player_size
         );
     }
+
+    m_dialogue_box.render(window);
 
     window.present();
 }
