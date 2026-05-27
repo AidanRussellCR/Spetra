@@ -22,6 +22,11 @@ namespace spetra {
         m_last_counter = current_counter;
 
         m_delta_seconds = static_cast<double>(delta_ms) / 1000.0;
+
+        if (m_delta_seconds > m_max_delta_seconds) {
+            m_delta_seconds = m_max_delta_seconds;
+        }
+
         m_elapsed_seconds += m_delta_seconds;
     }
 
@@ -31,6 +36,10 @@ namespace spetra {
 
     double Timer::elapsed_seconds() const {
         return m_elapsed_seconds;
+    }
+
+    void Timer::set_max_delta_seconds(double max_delta) {
+        m_max_delta_seconds = max_delta;
     }
 
 } // namespace spetra
