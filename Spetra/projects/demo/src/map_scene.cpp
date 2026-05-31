@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 #include "spetra/input.hpp"
 #include "spetra/scene_manager.hpp"
@@ -64,6 +65,8 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
 
 void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
     (void)scene_manager;
+
+    m_last_delta_time = delta_time;
 
     m_dialogue_box.update(delta_time);
 
@@ -224,10 +227,10 @@ void MapScene::render(spetra::Window& window) {
     int map_pixel_width = m_config.map.width * resolved_tile_size;
     int map_pixel_height = m_config.map.height * resolved_tile_size;
 
-    update_camera(window);
+    update_camera(window, m_last_delta_time);
 
-    int camera_x = static_cast<int>(m_camera_x);
-    int camera_y = static_cast<int>(m_camera_y);
+    const float camera_x = m_camera_x;
+    const float camera_y = m_camera_y;
 
     // Draw tiles (layers)
     for (const TileLayer& layer : m_config.map.layers) {
@@ -245,8 +248,8 @@ void MapScene::render(spetra::Window& window) {
                 int src_x = (tile_index % tileset_columns) * resolved_tile_size;
                 int src_y = (tile_index / tileset_columns) * resolved_tile_size;
 
-                int dst_x = x * resolved_tile_size - camera_x;
-                int dst_y = y * resolved_tile_size - camera_y;
+                int dst_x = static_cast<int>(std::lround(x * resolved_tile_size - camera_x));
+                int dst_y = static_cast<int>(std::lround(y * resolved_tile_size - camera_y));
 
                 if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
                     continue;
@@ -279,8 +282,8 @@ void MapScene::render(spetra::Window& window) {
                     continue;
                 }
 
-                int dst_x = x * resolved_tile_size - camera_x;
-                int dst_y = y * resolved_tile_size - camera_y;
+                int dst_x = static_cast<int>(std::lround(x * resolved_tile_size - camera_x));
+                int dst_y = static_cast<int>(std::lround(y * resolved_tile_size - camera_y));
 
                 if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
                     continue;
@@ -302,8 +305,8 @@ void MapScene::render(spetra::Window& window) {
     }
 
     // Draw player
-    int player_screen_x = static_cast<int>(m_player_x) - camera_x;
-    int player_screen_y = static_cast<int>(m_player_y) - camera_y;
+    int player_screen_x = static_cast<int>(std::lround(m_player_x - camera_x));
+    int player_screen_y = static_cast<int>(std::lround(m_player_y - camera_y));
 
     if (m_player_texture_loaded) {
         int src_x = m_player_frame * m_player_frame_width;
@@ -336,32 +339,54 @@ void MapScene::render(spetra::Window& window) {
     window.present();
 }
 
-void MapScene::update_camera(const spetra::Window& window) {
+void MapScene::update_camera(const spetra::Window& window, double delta_time) {
     int resolved_tile_size = tile_size();
 
     int map_pixel_width = m_config.map.width * resolved_tile_size;
     int map_pixel_height = m_config.map.height * resolved_tile_size;
 
-    if (m_camera_mode == CameraMode::FollowPlayer) {
-        m_camera_x =
-        m_player_x +
-        static_cast<float>(m_player_size) / 2.0f -
-        static_cast<float>(window.render_width()) / 2.0f;
+    float target_x = m_camera_x;
+    float target_y = m_camera_y;
 
-        m_camera_y =
-        m_player_y +
-        static_cast<float>(m_player_size) / 2.0f -
-        static_cast<float>(window.render_height()) / 2.0f;
+    if (m_camera_mode == CameraMode::FollowPlayer) {
+        target_x = m_player_x
+                   + static_cast<float>(m_player_size) / 2.0f
+                   - static_cast<float>(window.render_width()) / 2.0f;
+
+        target_y = m_player_y
+                   + static_cast<float>(m_player_size) / 2.0f
+                   - static_cast<float>(window.render_height()) / 2.0f;
     }
 
-    float max_camera_x =
-    static_cast<float>(std::max(0, map_pixel_width - window.render_width()));
+    // Clamp camera to map bounds
+    float max_camera_x = static_cast<float>(std::max(0, map_pixel_width - window.render_width()));
+    float max_camera_y = static_cast<float>(std::max(0, map_pixel_height - window.render_height()));
 
-    float max_camera_y =
-    static_cast<float>(std::max(0, map_pixel_height - window.render_height()));
+    target_x = std::clamp(target_x, 0.0f, max_camera_x);
+    target_y = std::clamp(target_y, 0.0f, max_camera_y);
 
-    m_camera_x = std::clamp(m_camera_x, 0.0f, max_camera_x);
-    m_camera_y = std::clamp(m_camera_y, 0.0f, max_camera_y);
+    // Snap on the first frame
+    if (!m_camera_initialized) {
+        m_camera_x = target_x;
+        m_camera_y = target_y;
+        m_camera_initialized = true;
+        return;
+    }
+
+    if (m_camera_smoothing > 0.0f) {
+        // Frame-rate independent smoothing
+        float t = 1.0f - std::exp(-m_camera_smoothing * static_cast<float>(delta_time));
+        m_camera_x += (target_x - m_camera_x) * t;
+        m_camera_y += (target_y - m_camera_y) * t;
+
+        // Kill sub-pixel drift
+        if (std::abs(target_x - m_camera_x) < 0.05f) m_camera_x = target_x;
+        if (std::abs(target_y - m_camera_y) < 0.05f) m_camera_y = target_y;
+    }
+    else {
+        m_camera_x = target_x;
+        m_camera_y = target_y;
+    }
 }
 
 int MapScene::tile_size() const {
