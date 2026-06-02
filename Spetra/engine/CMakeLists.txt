@@ -9,6 +9,7 @@ add_library(spetra STATIC
     src/filesystem.cpp
     src/text.cpp
     src/dialogue_box.cpp
+    src/entity.cpp
 )
 
 target_include_directories(spetra

@@ -8,6 +8,7 @@
 #include "spetra/scene.hpp"
 #include "spetra/texture.hpp"
 #include "spetra/dialogue_box.hpp"
+#include "spetra/entity.hpp"
 #include "map_data.hpp"
 
 enum class CameraMode {
@@ -35,6 +36,7 @@ private:
     int tile_size() const;
     bool is_valid_tile_size(int size) const;
     bool is_tile_blocked(int tile_x, int tile_y) const;
+    void resolve_movement(spetra::Entity& entity, float dx, float dy);
     void update_camera(const spetra::Window& window, double delta_time);
 
 private:
@@ -44,30 +46,12 @@ private:
 
     spetra::DialogueBox m_dialogue_box;
 
-    float m_player_x = 0.0f;
-    float m_player_y = 0.0f;
-    int m_player_size = 12;
-    float m_player_speed = 80.0f;
-    spetra::Color m_player_color{255, 220, 120, 255};
-
-    spetra::Texture m_player_texture;
-    bool m_player_texture_loaded = false;
-
+    spetra::Entity m_player;
     std::string m_player_sprite_path = "assets/sprites/player.png";
-
-    int m_player_frame_width = 16;
-    int m_player_frame_height = 16;
-
-    int m_player_direction = 0; // 0 down, 1 left, 2 right, 3 up
-    int m_player_frame = 0;
-
-    double m_walk_anim_timer = 0.0;
-    double m_walk_anim_frame_time = 0.15;
 
     float m_camera_x = 0.0f;
     float m_camera_y = 0.0f;
     CameraMode m_camera_mode = CameraMode::FollowPlayer;
-
     float m_camera_smoothing = 0.0f; // easing rate; higher = snappier, 0 = instant
     bool m_camera_initialized = false;
     double m_last_delta_time = 0.0;

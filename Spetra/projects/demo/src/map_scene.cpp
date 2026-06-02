@@ -19,12 +19,19 @@ void MapScene::on_enter() {
         std::cerr << "Invalid tile size. Must be positive and even.\n";
     }
 
-    // Add player around the center of the map
-    int map_pixel_width = m_config.map.width * resolved_tile_size;
-    int map_pixel_height = m_config.map.height * resolved_tile_size;
+    // Configure the player entity and drop it at the map spawn
+    m_player.x = m_config.map.spawn_x;
+    m_player.y = m_config.map.spawn_y;
+    m_player.size = 12; // collision box
+    m_player.speed = 80.0f;
+    m_player.frame_width = 16;
+    m_player.frame_height = 16;
+    m_player.frame_count = 4;
+    m_player.anim_frame_time = 0.15;
+    m_player.fallback_color = {255, 220, 120, 255};
 
-    m_player_x = m_config.map.spawn_x;
-    m_player_y = m_config.map.spawn_y;
+    // Re-snap the camera
+    m_camera_initialized = false;
 
     m_dialogue_box.set_skin_path("assets/ui/textbox.png", 6);
     m_dialogue_box.set_font_path("assets/fonts/dialogue.ttf", 12.0f);
@@ -95,76 +102,24 @@ void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
 
     bool is_moving = move_x != 0.0f || move_y != 0.0f;
 
-    if (move_y > 0.0f) {
-        m_player_direction = 0; // down
-    }
-    else if (move_x < 0.0f) {
-        m_player_direction = 1; // left
-    }
-    else if (move_x > 0.0f) {
-        m_player_direction = 2; // right
-    }
-    else if (move_y < 0.0f) {
-        m_player_direction = 3; // up
-    }
+    m_player.face_movement(move_x, move_y);
+    m_player.animate(delta_time, is_moving);
 
-    if (is_moving) {
-        m_walk_anim_timer += delta_time;
+    float dx = move_x * m_player.speed * static_cast<float>(delta_time);
+    float dy = move_y * m_player.speed * static_cast<float>(delta_time);
 
-        if (m_walk_anim_timer >= m_walk_anim_frame_time) {
-            m_walk_anim_timer = 0.0;
-            m_player_frame = (m_player_frame + 1) % 4;
-        }
-    }
-    else {
-        m_walk_anim_timer = 0.0;
-        m_player_frame = 0;
-    }
-
-    float dx = move_x * m_player_speed * static_cast<float>(delta_time);
-    float dy = move_y * m_player_speed * static_cast<float>(delta_time);
+    resolve_movement(m_player, dx, dy);
 
     int resolved_tile_size = tile_size();
-
-    // X Movement
-    float new_x = m_player_x + dx;
-
-    int left_tile = static_cast<int>(new_x) / resolved_tile_size;
-    int right_tile = static_cast<int>(new_x + m_player_size - 1) / resolved_tile_size;
-    int top_tile = static_cast<int>(m_player_y) / resolved_tile_size;
-    int bottom_tile = static_cast<int>(m_player_y + m_player_size - 1) / resolved_tile_size;
-
-    if (!is_tile_blocked(left_tile, top_tile) &&
-        !is_tile_blocked(left_tile, bottom_tile) &&
-        !is_tile_blocked(right_tile, top_tile) &&
-        !is_tile_blocked(right_tile, bottom_tile)) {
-        m_player_x = new_x;
-    }
-
-    // Y Movement
-    float new_y = m_player_y + dy;
-
-    left_tile = static_cast<int>(m_player_x) / resolved_tile_size;
-    right_tile = static_cast<int>(m_player_x + m_player_size - 1) / resolved_tile_size;
-    top_tile = static_cast<int>(new_y) / resolved_tile_size;
-    bottom_tile = static_cast<int>(new_y + m_player_size - 1) / resolved_tile_size;
-
-    if (!is_tile_blocked(left_tile, top_tile) &&
-        !is_tile_blocked(left_tile, bottom_tile) &&
-        !is_tile_blocked(right_tile, top_tile) &&
-        !is_tile_blocked(right_tile, bottom_tile)) {
-        m_player_y = new_y;
-        }
-
     int map_pixel_width = m_config.map.width * resolved_tile_size;
     int map_pixel_height = m_config.map.height * resolved_tile_size;
 
     // Clamp player to map bounds
-    float max_x = static_cast<float>(std::max(0, map_pixel_width - m_player_size));
-    float max_y = static_cast<float>(std::max(0, map_pixel_height - m_player_size));
+    float max_x = static_cast<float>(std::max(0, map_pixel_width - m_player.size));
+    float max_y = static_cast<float>(std::max(0, map_pixel_height - m_player.size));
 
-    m_player_x = std::clamp(m_player_x, 0.0f, max_x);
-    m_player_y = std::clamp(m_player_y, 0.0f, max_y);
+    m_player.x = std::clamp(m_player.x, 0.0f, max_x);
+    m_player.y = std::clamp(m_player.y, 0.0f, max_y);
 }
 
 void MapScene::render(spetra::Window& window) {
@@ -184,18 +139,14 @@ void MapScene::render(spetra::Window& window) {
         m_loaded = true;
     }
 
-    if (!m_player_texture_loaded) {
+    if (!m_player.has_sprite()) {
         std::string full_path = spetra::get_asset_path(m_player_sprite_path);
 
-        if (!m_player_texture.load_from_file(window.renderer(), full_path)) {
+        if (!m_player.load_sprite(window.renderer(), full_path)) {
             std::cerr << "Failed to load player sprite: " << full_path << '\n';
         }
         else {
-            std::cout << "Loaded player sprite: " << full_path
-            << " (" << m_player_texture.width()
-            << "x" << m_player_texture.height() << ")\n";
-
-            m_player_texture_loaded = true;
+            std::cout << "Loaded player sprite: " << full_path << '\n';
         }
     }
 
@@ -223,9 +174,6 @@ void MapScene::render(spetra::Window& window) {
         window.present();
         return;
     }
-
-    int map_pixel_width = m_config.map.width * resolved_tile_size;
-    int map_pixel_height = m_config.map.height * resolved_tile_size;
 
     update_camera(window, m_last_delta_time);
 
@@ -305,38 +253,45 @@ void MapScene::render(spetra::Window& window) {
     }
 
     // Draw player
-    int player_screen_x = static_cast<int>(std::lround(m_player_x - camera_x));
-    int player_screen_y = static_cast<int>(std::lround(m_player_y - camera_y));
-
-    if (m_player_texture_loaded) {
-        int src_x = m_player_frame * m_player_frame_width;
-        int src_y = m_player_direction * m_player_frame_height;
-
-        window.draw_texture_region(
-            m_player_texture,
-            src_x,
-            src_y,
-            m_player_frame_width,
-            m_player_frame_height,
-            player_screen_x,
-            player_screen_y,
-            m_player_frame_width,
-            m_player_frame_height
-        );
-    }
-    else {
-        window.draw_filled_rect(
-            m_player_color,
-            player_screen_x,
-            player_screen_y,
-            m_player_size,
-            m_player_size
-        );
-    }
+    m_player.render(window, camera_x, camera_y);
 
     m_dialogue_box.render(window);
 
     window.present();
+}
+
+void MapScene::resolve_movement(spetra::Entity& entity, float dx, float dy) {
+    int resolved_tile_size = tile_size();
+
+    // X movement
+    float new_x = entity.x + dx;
+
+    int left_tile   = static_cast<int>(new_x) / resolved_tile_size;
+    int right_tile  = static_cast<int>(new_x + entity.size - 1) / resolved_tile_size;
+    int top_tile    = static_cast<int>(entity.y) / resolved_tile_size;
+    int bottom_tile = static_cast<int>(entity.y + entity.size - 1) / resolved_tile_size;
+
+    if (!is_tile_blocked(left_tile, top_tile) &&
+        !is_tile_blocked(left_tile, bottom_tile) &&
+        !is_tile_blocked(right_tile, top_tile) &&
+        !is_tile_blocked(right_tile, bottom_tile)) {
+        entity.x = new_x;
+        }
+
+        // Y movement
+        float new_y = entity.y + dy;
+
+    left_tile   = static_cast<int>(entity.x) / resolved_tile_size;
+    right_tile  = static_cast<int>(entity.x + entity.size - 1) / resolved_tile_size;
+    top_tile    = static_cast<int>(new_y) / resolved_tile_size;
+    bottom_tile = static_cast<int>(new_y + entity.size - 1) / resolved_tile_size;
+
+    if (!is_tile_blocked(left_tile, top_tile) &&
+        !is_tile_blocked(left_tile, bottom_tile) &&
+        !is_tile_blocked(right_tile, top_tile) &&
+        !is_tile_blocked(right_tile, bottom_tile)) {
+        entity.y = new_y;
+        }
 }
 
 void MapScene::update_camera(const spetra::Window& window, double delta_time) {
@@ -349,12 +304,12 @@ void MapScene::update_camera(const spetra::Window& window, double delta_time) {
     float target_y = m_camera_y;
 
     if (m_camera_mode == CameraMode::FollowPlayer) {
-        target_x = m_player_x
-                   + static_cast<float>(m_player_size) / 2.0f
+        target_x = m_player.x
+                   + static_cast<float>(m_player.size) / 2.0f
                    - static_cast<float>(window.render_width()) / 2.0f;
 
-        target_y = m_player_y
-                   + static_cast<float>(m_player_size) / 2.0f
+        target_y = m_player.y
+                   + static_cast<float>(m_player.size) / 2.0f
                    - static_cast<float>(window.render_height()) / 2.0f;
     }
 
