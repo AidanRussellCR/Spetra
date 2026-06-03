@@ -10,7 +10,7 @@ namespace spetra {
     public:
         virtual ~Scene() = default;
 
-        virtual void on_enter() {}
+        virtual void on_enter(Window& window) { (void)window; }
         virtual void on_exit() {}
 
         virtual void handle_input(Input& input, SceneManager& scene_manager) = 0;

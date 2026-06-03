@@ -27,7 +27,7 @@ public:
 public:
     explicit MapScene(const Config& config);
 
-    void on_enter() override;
+    void on_enter(spetra::Window& window) override;
     void handle_input(spetra::Input& input, spetra::SceneManager& scene_manager) override;
     void update(double delta_time, spetra::SceneManager& scene_manager) override;
     void render(spetra::Window& window) override;

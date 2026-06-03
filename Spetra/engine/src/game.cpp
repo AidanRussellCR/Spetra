@@ -31,6 +31,9 @@ namespace spetra {
             return false;
         }
 
+        // Let the scene manager enter the starting scene after renderer
+        m_scene_manager.set_window(m_window);
+
         m_timer.start();
         m_running = true;
         return true;

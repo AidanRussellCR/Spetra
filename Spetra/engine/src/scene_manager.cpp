@@ -8,6 +8,16 @@
 
 namespace spetra {
 
+    void SceneManager::set_window(Window& window) {
+        m_window = &window;
+
+        // A scene set before the window existed had its enter deferred
+        if (m_current_scene && m_needs_enter) {
+            m_current_scene->on_enter(*m_window);
+            m_needs_enter = false;
+        }
+    }
+
     void SceneManager::change_scene(std::unique_ptr<Scene> scene) {
         if (m_current_scene) {
             m_current_scene->on_exit();
@@ -16,7 +26,14 @@ namespace spetra {
         m_current_scene = std::move(scene);
 
         if (m_current_scene) {
-            m_current_scene->on_enter();
+            if (m_window) {
+                m_current_scene->on_enter(*m_window);
+                m_needs_enter = false;
+            }
+            else {
+                // No renderer yet; enter once set_window is called
+                m_needs_enter = true;
+            }
         }
     }
 

@@ -10,6 +10,7 @@ namespace spetra {
 
     class SceneManager {
     public:
+        void set_window(Window& window);
         void change_scene(std::unique_ptr<Scene> scene);
 
         void handle_input(Input& input);
@@ -20,6 +21,8 @@ namespace spetra {
 
     private:
         std::unique_ptr<Scene> m_current_scene;
+        Window* m_window = nullptr;
+        bool m_needs_enter = false;
     };
 
 } // namespace spetra

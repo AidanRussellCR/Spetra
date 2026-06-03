@@ -10,7 +10,7 @@ namespace spetra {
         double delta_seconds() const;
         double elapsed_seconds() const;
 
-        void set_max_delta_seconds(double max_delta);
+        void set_max_delta_seconds(double seconds);
 
     private:
         double m_delta_seconds = 0.0;

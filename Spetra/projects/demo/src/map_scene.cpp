@@ -13,7 +13,7 @@ MapScene::MapScene(const Config& config)
 : m_config(config) {
 }
 
-void MapScene::on_enter() {
+void MapScene::on_enter(spetra::Window& window) {
     int resolved_tile_size = tile_size();
     if (!is_valid_tile_size(resolved_tile_size)) {
         std::cerr << "Invalid tile size. Must be positive and even.\n";
@@ -35,6 +35,25 @@ void MapScene::on_enter() {
 
     m_dialogue_box.set_skin_path("assets/ui/textbox.png", 6);
     m_dialogue_box.set_font_path("assets/fonts/dialogue.ttf", 12.0f);
+
+    // Load GPU resources
+    std::string tileset_path = spetra::get_asset_path(m_config.map.tileset_path);
+    if (!m_tileset.load_from_file(window.renderer(), tileset_path)) {
+        std::cerr << "Failed to load tileset: " << tileset_path << '\n';
+    }
+    else {
+        std::cout << "Loaded tileset: " << tileset_path
+        << " (" << m_tileset.width() << "x" << m_tileset.height() << ")\n";
+        m_loaded = true;
+    }
+
+    std::string sprite_path = spetra::get_asset_path(m_player_sprite_path);
+    if (!m_player.load_sprite(window.renderer(), sprite_path)) {
+        std::cerr << "Failed to load player sprite: " << sprite_path << '\n';
+    }
+    else {
+        std::cout << "Loaded player sprite: " << sprite_path << '\n';
+    }
 }
 
 void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_manager) {
@@ -125,29 +144,10 @@ void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
 void MapScene::render(spetra::Window& window) {
     window.clear(m_config.clear_color);
 
+    // If the tileset is missing bail after clearing
     if (!m_loaded) {
-        std::string full_path = spetra::get_asset_path(m_config.map.tileset_path);
-
-        if (!m_tileset.load_from_file(window.renderer(), full_path)) {
-            std::cerr << "Failed to load tileset: " << full_path << '\n';
-            window.present();
-            return;
-        }
-
-        std::cout << "Loaded tileset: " << full_path << " (" << m_tileset.width() << "x" << m_tileset.height() << ")\n";
-
-        m_loaded = true;
-    }
-
-    if (!m_player.has_sprite()) {
-        std::string full_path = spetra::get_asset_path(m_player_sprite_path);
-
-        if (!m_player.load_sprite(window.renderer(), full_path)) {
-            std::cerr << "Failed to load player sprite: " << full_path << '\n';
-        }
-        else {
-            std::cout << "Loaded player sprite: " << full_path << '\n';
-        }
+        window.present();
+        return;
     }
 
     int resolved_tile_size = tile_size();
