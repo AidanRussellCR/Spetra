@@ -6,6 +6,7 @@
 #include "spetra/window.hpp"
 #include "spetra/input.hpp"
 #include "spetra/timer.hpp"
+#include "spetra/world.hpp"
 #include "spetra/scene_manager.hpp"
 
 namespace spetra {
@@ -23,6 +24,9 @@ namespace spetra {
         void set_starting_scene(std::unique_ptr<Scene> scene);
         int run();
 
+        // Global game state
+        World& world();
+
     private:
         bool startup();
         void shutdown();
@@ -35,6 +39,7 @@ namespace spetra {
         Window m_window;
         Input m_input;
         Timer m_timer;
+        World m_world;
         SceneManager m_scene_manager;
         bool m_running = false;
     };

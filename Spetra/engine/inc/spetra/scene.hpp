@@ -5,6 +5,7 @@ namespace spetra {
     class Input;
     class Window;
     class SceneManager;
+    class World;
 
     class Scene {
     public:
@@ -16,6 +17,16 @@ namespace spetra {
         virtual void handle_input(Input& input, SceneManager& scene_manager) = 0;
         virtual void update(double delta_time, SceneManager& scene_manager) = 0;
         virtual void render(Window& window) = 0;
+
+    protected:
+        // Global state, injected by SceneManager before on_enter
+        // Available in every scene method
+        // Include "spetra/world.hpp" where used
+        World& world() const { return *m_world; }
+
+    private:
+        friend class SceneManager;
+        World* m_world = nullptr;
     };
 
 } // namespace spetra

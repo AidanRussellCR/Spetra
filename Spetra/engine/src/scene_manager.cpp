@@ -8,11 +8,21 @@
 
 namespace spetra {
 
+    void SceneManager::set_world(World& world) {
+        m_world = &world;
+
+        // Keep an already-active scene's back-reference in sync regardless of call ordering
+        if (m_current_scene) {
+            m_current_scene->m_world = m_world;
+        }
+    }
+
     void SceneManager::set_window(Window& window) {
         m_window = &window;
 
         // A scene set before the window existed had its enter deferred
         if (m_current_scene && m_needs_enter) {
+            m_current_scene->m_world = m_world;
             m_current_scene->on_enter(*m_window);
             m_needs_enter = false;
         }

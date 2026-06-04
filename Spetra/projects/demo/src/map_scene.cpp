@@ -7,6 +7,7 @@
 #include "spetra/input.hpp"
 #include "spetra/scene_manager.hpp"
 #include "spetra/window.hpp"
+#include "spetra/world.hpp"
 #include "spetra/filesystem.hpp"
 
 MapScene::MapScene(const Config& config)
@@ -72,11 +73,19 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
         if (m_dialogue_box.is_active()) {
             m_dialogue_box.advance();
         }
-        else {
+        else if (!world().variables.flag("demo.seen_intro")) {
+            // First time: play the intro and remember it in global state
             m_dialogue_box.start({
                 {"Speaker 1", "This is the initial test of Spetra's dialogue system."},
                 {"Speaker 2", "Speaker names can change between dialogue sections."},
                 {"", "Narration can appear without a speaker name as well."}
+            });
+            world().variables.set_flag("demo.seen_intro", true);
+        }
+        else {
+            // The flag persists for the rest of the run, so we branch on it
+            m_dialogue_box.start({
+                {"", "You've already seen the intro (demo.seen_intro is set)."}
             });
         }
     }

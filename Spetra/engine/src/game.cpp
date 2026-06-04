@@ -10,6 +10,7 @@ namespace spetra {
 
     Game::Game(const AppConfig& config)
     : m_config(config) {
+        m_scene_manager.set_world(m_world);
     }
 
     Game::~Game() {
@@ -18,6 +19,10 @@ namespace spetra {
 
     void Game::set_starting_scene(std::unique_ptr<Scene> scene) {
         m_scene_manager.change_scene(std::move(scene));
+    }
+
+    World& Game::world() {
+        return m_world;
     }
 
     bool Game::startup() {

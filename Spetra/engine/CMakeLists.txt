@@ -10,6 +10,8 @@ add_library(spetra STATIC
     src/text.cpp
     src/dialogue_box.cpp
     src/entity.cpp
+    src/variables.cpp
+    src/world.cpp
 )
 
 target_include_directories(spetra
@@ -20,12 +22,14 @@ target_include_directories(spetra
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 find_package(SDL3_image REQUIRED CONFIG)
 find_package(SDL3_ttf REQUIRED CONFIG)
+find_package(nlohmann_json REQUIRED)
 
 target_link_libraries(spetra
     PUBLIC
         SDL3::SDL3
         SDL3_image::SDL3_image
         SDL3_ttf::SDL3_ttf
+        nlohmann_json::nlohmann_json
 )
 
 target_compile_features(spetra PUBLIC cxx_std_20)
