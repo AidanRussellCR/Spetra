@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <memory>
 
+#include "pause_overlay_scene.hpp"
+#include "battle_stub_scene.hpp"
 #include "spetra/input.hpp"
 #include "spetra/scene_manager.hpp"
 #include "spetra/window.hpp"
@@ -67,6 +70,17 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
 
     if (input.was_pressed(SDL_SCANCODE_F1)) {
         m_show_collision_debug = !m_show_collision_debug;
+    }
+
+    // P pushes a translucent pause overlay
+    // B pushes an opaque battle stub
+    if (input.was_pressed(SDL_SCANCODE_P)) {
+        scene_manager.push_scene(std::make_unique<PauseOverlayScene>());
+        return;
+    }
+    if (input.was_pressed(SDL_SCANCODE_B)) {
+        scene_manager.push_scene(std::make_unique<BattleStubScene>());
+        return;
     }
 
     if (input.was_pressed(SDL_SCANCODE_E) || input.was_pressed(SDL_SCANCODE_RETURN)) {
@@ -155,32 +169,27 @@ void MapScene::render(spetra::Window& window) {
 
     // If the tileset is missing bail after clearing
     if (!m_loaded) {
-        window.present();
         return;
     }
 
     int resolved_tile_size = tile_size();
     if (!is_valid_tile_size(resolved_tile_size)) {
-        window.present();
         return;
     }
 
     if (m_config.map.width <= 0 || m_config.map.height <= 0) {
-        window.present();
         return;
     }
 
     for (const TileLayer& layer : m_config.map.layers) {
         if (static_cast<int>(layer.tiles.size()) != m_config.map.width * m_config.map.height) {
             std::cerr << "Invalid tile layer size: " << layer.name << '\n';
-            window.present();
             return;
         }
     }
 
     int tileset_columns = m_tileset.width() / resolved_tile_size;
     if (tileset_columns <= 0) {
-        window.present();
         return;
     }
 
@@ -265,8 +274,6 @@ void MapScene::render(spetra::Window& window) {
     m_player.render(window, camera_x, camera_y);
 
     m_dialogue_box.render(window);
-
-    window.present();
 }
 
 void MapScene::resolve_movement(spetra::Entity& entity, float dx, float dy) {

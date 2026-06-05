@@ -14,6 +14,11 @@ namespace spetra {
         virtual void on_enter(Window& window) { (void)window; }
         virtual void on_exit() {}
 
+        // Stack visibility policy where "blocks below" means scenes beneath this one are skipped for that phase
+        // Defaults suit a full opaque scene that both freezes and hides everything under it; overlays override as needed
+        virtual bool blocks_update_below() const { return true; }
+        virtual bool blocks_render_below() const { return true; }
+
         virtual void handle_input(Input& input, SceneManager& scene_manager) = 0;
         virtual void update(double delta_time, SceneManager& scene_manager) = 0;
         virtual void render(Window& window) = 0;

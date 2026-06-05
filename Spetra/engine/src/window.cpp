@@ -22,6 +22,9 @@ namespace spetra {
             return false;
         }
 
+        // Enable alpha blending for draw operations
+        SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+
         m_render_width = render_width;
         m_render_height = render_height;
 

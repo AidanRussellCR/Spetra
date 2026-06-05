@@ -4,6 +4,8 @@ add_executable(demo
     src/main.cpp
     src/map_scene.cpp
     src/map_loader.cpp
+    src/pause_overlay_scene.cpp
+    src/battle_stub_scene.cpp
 )
 
 target_include_directories(demo
