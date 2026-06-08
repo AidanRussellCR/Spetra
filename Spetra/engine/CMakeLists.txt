@@ -12,6 +12,14 @@ add_library(spetra STATIC
     src/entity.cpp
     src/variables.cpp
     src/world.cpp
+    src/ui/widget.cpp
+    src/ui/theme.cpp
+    src/ui/panel.cpp
+    src/ui/label.cpp
+    src/ui/bar.cpp
+    src/ui/image.cpp
+    src/ui/list_menu.cpp
+    src/ui/ui_root.cpp
 )
 
 target_include_directories(spetra

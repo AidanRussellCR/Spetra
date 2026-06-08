@@ -7,6 +7,7 @@
 
 #include "pause_overlay_scene.hpp"
 #include "battle_stub_scene.hpp"
+#include "menu_scene.hpp"
 #include "spetra/input.hpp"
 #include "spetra/scene_manager.hpp"
 #include "spetra/window.hpp"
@@ -61,8 +62,6 @@ void MapScene::on_enter(spetra::Window& window) {
 }
 
 void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_manager) {
-    (void)scene_manager;
-
     m_move_left = input.is_down(SDL_SCANCODE_LEFT) || input.is_down(SDL_SCANCODE_A);
     m_move_right = input.is_down(SDL_SCANCODE_RIGHT) || input.is_down(SDL_SCANCODE_D);
     m_move_up = input.is_down(SDL_SCANCODE_UP) || input.is_down(SDL_SCANCODE_W);
@@ -80,6 +79,12 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
     }
     if (input.was_pressed(SDL_SCANCODE_B)) {
         scene_manager.push_scene(std::make_unique<BattleStubScene>());
+        return;
+    }
+
+    // M pushes the UI-framework pause menu
+    if (input.was_pressed(SDL_SCANCODE_M)) {
+        scene_manager.push_scene(std::make_unique<MenuScene>());
         return;
     }
 

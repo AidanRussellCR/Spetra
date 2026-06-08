@@ -3,18 +3,12 @@
 #include <string>
 
 #include "spetra/color.hpp"
+#include "spetra/direction.hpp"
 #include "spetra/texture.hpp"
 
 namespace spetra {
 
     class Window;
-
-    enum class Direction {
-        Down = 0,
-        Left = 1,
-        Right = 2,
-        Up = 3
-    };
 
     // A general moving, animated, drawable thing on a map
 
