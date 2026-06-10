@@ -25,7 +25,7 @@ int main() {
 
     spetra::Game game(config);
 
-    MapData map = load_map_from_json("assets/maps/camera_test_map.json");
+    MapData map = load_map_from_json("assets/maps/schema_test_map.json");
 
     MapScene::Config map_scene_config;
     map_scene_config.map = map;

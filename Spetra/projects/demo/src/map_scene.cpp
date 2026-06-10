@@ -366,11 +366,7 @@ void MapScene::update_camera(const spetra::Window& window, double delta_time) {
 }
 
 int MapScene::tile_size() const {
-    if (m_config.map.tile_size_override.has_value()) {
-        return *m_config.map.tile_size_override;
-    }
-
-    return m_config.map.default_tile_size;
+    return m_config.map.tile_size();
 }
 
 bool MapScene::is_valid_tile_size(int size) const {
@@ -378,17 +374,5 @@ bool MapScene::is_valid_tile_size(int size) const {
 }
 
 bool MapScene::is_tile_blocked(int tile_x, int tile_y) const {
-    if (tile_x < 0 || tile_y < 0 ||
-        tile_x >= m_config.map.width ||
-        tile_y >= m_config.map.height) {
-        return true; // treat region outside map as solid
-    }
-
-    int index = tile_y * m_config.map.width + tile_x;
-
-    if (index < 0 || index >= static_cast<int>(m_config.map.collision.cells.size())) {
-        return false;
-    }
-
-    return m_config.map.collision.cells[index] != 0;
+    return m_config.map.is_tile_blocked(tile_x, tile_y);
 }

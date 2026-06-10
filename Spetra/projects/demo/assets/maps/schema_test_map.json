@@ -1,0 +1,142 @@
+{
+  "name": "schema_test",
+  "width": 8,
+  "height": 6,
+  "default_tile_size": 16,
+  "tileset_path": "assets/tilesets/tileset.png",
+  "spawn": { "x": 48.0, "y": 48.0 },
+
+  "layers": [
+    {
+      "name": "far_bg",
+      "visible": true,
+      "depth": -100,
+      "parallax_x": 0.5,
+      "parallax_y": 0.5,
+      "tiles": [
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0
+      ]
+    },
+    {
+      "name": "ground",
+      "visible": true,
+      "depth": -10,
+      "parallax_x": 1.0,
+      "parallax_y": 1.0,
+      "tiles": [
+        1, 1, 1, 1, 1, 1, 1, 1,
+        1, 2, 2, 2, 2, 2, 2, 1,
+        1, 2, 2, 2, 2, 2, 2, 1,
+        1, 2, 2, 2, 2, 2, 2, 1,
+        1, 2, 2, 2, 2, 2, 2, 1,
+        1, 1, 1, 1, 1, 1, 1, 1
+      ]
+    },
+    {
+      "name": "overhang",
+      "visible": true,
+      "depth": 10,
+      "parallax_x": 1.0,
+      "parallax_y": 1.0,
+      "tiles": [
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1,  3,  3, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1
+      ]
+    }
+  ],
+
+  "collision": {
+    "cells": [
+      1, 1, 1, 1, 1, 1, 1, 1,
+      1, 0, 0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 0, 0, 1,
+      1, 1, 1, 1, 1, 1, 1, 1
+    ]
+  },
+
+  "triggers": [
+    {
+      "id": "chest_01",
+      "region": { "x": 2, "y": 2, "w": 1, "h": 1 },
+      "fire_mode": "on_interact",
+      "once": true,
+      "condition": { "flag": "has_key", "equals": true },
+      "actions": [
+        {
+          "type": "dialogue",
+          "lines": [
+            { "speaker": "", "text": "The chest creaks open." }
+          ]
+        },
+        { "type": "set_flag", "key": "chest_01_open", "value": true },
+        { "type": "give_item", "item": "potion", "count": 1 }
+      ]
+    },
+    {
+      "id": "gate_cutscene",
+      "region": { "x": 4, "y": 1, "w": 2, "h": 1 },
+      "fire_mode": "on_enter",
+      "once": true,
+      "condition": {
+        "all": [
+          { "flag": "chest_01_open" },
+          { "int": "gold", "op": ">=", "value": 50 }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "lines": [
+            { "speaker": "Guard", "text": "Hold there. You've earned passage." }
+          ]
+        },
+        { "type": "set_flag", "key": "gate_open", "value": true }
+      ]
+    },
+    {
+      "id": "npc_guard_talk",
+      "region": { "x": 5, "y": 3, "w": 1, "h": 1 },
+      "fire_mode": "on_interact",
+      "once": false,
+      "actions": [
+        {
+          "type": "dialogue",
+          "lines": [
+            { "speaker": "Guard", "text": "Nothing to report." }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "actors": [
+    {
+      "id": "npc_guard",
+      "sprite": "assets/sprites/player.png",
+      "spawn": { "x": 48.0, "y": 48.0 },
+      "behavior": "patrol",
+      "path": [
+        { "x": 5, "y": 3 },
+        { "x": 5, "y": 4 },
+        { "x": 3, "y": 4 }
+      ],
+      "interaction": "npc_guard_talk",
+      "size": 12,
+      "speed": 30.0,
+      "frame_width": 16,
+      "frame_height": 16,
+      "frame_count": 4
+    }
+  ]
+}
