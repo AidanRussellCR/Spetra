@@ -15,4 +15,5 @@ MapData load_map_from_json(const std::string& asset_path);
 bool save_map_to_json(const MapData& map, const std::string& asset_path);
 
 // Save to an absolute/relative filesystem path (used by tests and the editor)
+MapData load_map_from_file(const std::string& full_path);
 bool save_map_to_file(const MapData& map, const std::string& full_path);

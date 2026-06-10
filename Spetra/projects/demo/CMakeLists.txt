@@ -29,3 +29,31 @@ add_custom_command(TARGET demo POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:demo>/assets
 )
+
+# Tests; the test links only the map code + nlohmann (no SDL/engine)
+enable_testing()
+
+add_executable(map_roundtrip_test
+    tests/map_roundtrip_test.cpp
+    src/map_loader.cpp
+    src/map_data.cpp
+)
+
+target_include_directories(map_roundtrip_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+        ${CMAKE_SOURCE_DIR}/engine/inc # for spetra/filesystem.hpp
+)
+
+target_link_libraries(map_roundtrip_test
+    PRIVATE
+        nlohmann_json::nlohmann_json
+)
+
+target_compile_definitions(map_roundtrip_test
+    PRIVATE
+        TEST_MAP_INPUT="${CMAKE_CURRENT_SOURCE_DIR}/assets/maps/schema_test_map.json"
+        TEST_MAP_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+)
+
+add_test(NAME map_roundtrip COMMAND map_roundtrip_test)

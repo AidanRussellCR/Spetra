@@ -388,10 +388,9 @@ json map_to_json(const MapData& map) {
 
 // File helpers
 
-MapData load_map_from_json(const std::string& asset_path) {
+MapData load_map_from_file(const std::string& full_path) {
     MapData map;
 
-    std::string full_path = spetra::get_asset_path(asset_path);
     std::ifstream file(full_path);
 
     if (!file.is_open()) {
@@ -423,6 +422,10 @@ MapData load_map_from_json(const std::string& asset_path) {
     }
 
     return map;
+}
+
+MapData load_map_from_json(const std::string& asset_path) {
+    return load_map_from_file(spetra::get_asset_path(asset_path));
 }
 
 bool save_map_to_file(const MapData& map, const std::string& full_path) {
