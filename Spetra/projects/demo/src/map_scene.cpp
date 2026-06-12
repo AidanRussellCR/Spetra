@@ -203,82 +203,118 @@ void MapScene::render(spetra::Window& window) {
     const float camera_x = m_camera_x;
     const float camera_y = m_camera_y;
 
-    // Draw tiles (layers)
-    for (const TileLayer& layer : m_config.map.layers) {
+    // Build a single depth-sorted draw order
+    std::vector<const spetra::Entity*> entities;
+    entities.push_back(&m_player);
+
+    m_draw_list.clear();
+
+    for (std::size_t i = 0; i < m_config.map.layers.size(); ++i) {
+        const TileLayer& layer = m_config.map.layers[i];
+
         if (!layer.visible) {
             continue;
         }
 
-        for (int y = 0; y < m_config.map.height; ++y) {
-            for (int x = 0; x < m_config.map.width; ++x) {
-                int tile_index = layer.tiles[y * m_config.map.width + x];
-                if (tile_index < 0) {
-                    continue;
-                }
+        m_draw_list.push_back(demo::DrawItem{layer.depth, 0, static_cast<int>(i), false});
+    }
 
-                int src_x = (tile_index % tileset_columns) * resolved_tile_size;
-                int src_y = (tile_index / tileset_columns) * resolved_tile_size;
+    for (std::size_t i = 0; i < entities.size(); ++i) {
+        // feet_y = bottom of the collision box
+        int feet_y = static_cast<int>(entities[i]->y + entities[i]->size);
+        m_draw_list.push_back(demo::DrawItem{0, feet_y, static_cast<int>(i), true});
+    }
 
-                int dst_x = static_cast<int>(std::lround(x * resolved_tile_size - camera_x));
-                int dst_y = static_cast<int>(std::lround(y * resolved_tile_size - camera_y));
+    demo::sort_draw_order(m_draw_list);
 
-                if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
-                    continue;
-                }
-
-                if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
-                    continue;
-                }
-
-                window.draw_texture_region(
-                    m_tileset,
-                    src_x, src_y, resolved_tile_size, resolved_tile_size,
-                    dst_x, dst_y, resolved_tile_size, resolved_tile_size
-                );
-            }
+    for (const demo::DrawItem& item : m_draw_list) {
+        if (item.is_entity) {
+            // Entities render at true camera (parallax 1.0 = ground)
+            entities[item.index]->render(window, camera_x, camera_y);
+        }
+        else {
+            draw_tile_layer(window, m_config.map.layers[item.index], tileset_columns, resolved_tile_size, camera_x, camera_y);
         }
     }
 
     // DEBUG - show collision
     if (m_show_collision_debug) {
-        for (int y = 0; y < m_config.map.height; ++y) {
-            for (int x = 0; x < m_config.map.width; ++x) {
-                int index = y * m_config.map.width + x;
+        draw_collision_debug(window, resolved_tile_size, camera_x, camera_y);
+    }
+    m_dialogue_box.render(window);
+}
 
-                if (index < 0 || index >= static_cast<int>(m_config.map.collision.cells.size())) {
-                    continue;
-                }
+void MapScene::draw_tile_layer(spetra::Window& window, const TileLayer& layer, int tileset_columns, int resolved_tile_size, float camera_x, float camera_y) {
+    // Parallax: scale the camera offset per layer
+    // 1.0 = moves with the camera
+    // 0.5 = half speed (distant background)
+    // 0.0 = pinned to the screen
+    const float cam_x = camera_x * layer.parallax_x;
+    const float cam_y = camera_y * layer.parallax_y;
 
-                if (m_config.map.collision.cells[index] == 0) {
-                    continue;
-                }
-
-                int dst_x = static_cast<int>(std::lround(x * resolved_tile_size - camera_x));
-                int dst_y = static_cast<int>(std::lround(y * resolved_tile_size - camera_y));
-
-                if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
-                    continue;
-                }
-
-                if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
-                    continue;
-                }
-
-                window.draw_filled_rect(
-                    spetra::Color{255, 0, 0, 100},
-                    dst_x,
-                    dst_y,
-                    resolved_tile_size,
-                    resolved_tile_size
-                );
+    for (int y = 0; y < m_config.map.height; ++y) {
+        for (int x = 0; x < m_config.map.width; ++x) {
+            int tile_index = layer.tiles[y * m_config.map.width + x];
+            if (tile_index < 0) {
+                continue;
             }
+
+            int src_x = (tile_index % tileset_columns) * resolved_tile_size;
+            int src_y = (tile_index / tileset_columns) * resolved_tile_size;
+
+            int dst_x = static_cast<int>(std::lround(x * resolved_tile_size - cam_x));
+            int dst_y = static_cast<int>(std::lround(y * resolved_tile_size - cam_y));
+
+            if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
+                continue;
+            }
+
+            if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
+                continue;
+            }
+
+            window.draw_texture_region(
+                m_tileset,
+                src_x, src_y, resolved_tile_size, resolved_tile_size,
+                dst_x, dst_y, resolved_tile_size, resolved_tile_size
+            );
         }
     }
+}
 
-    // Draw player
-    m_player.render(window, camera_x, camera_y);
+void MapScene::draw_collision_debug(spetra::Window& window, int resolved_tile_size, float camera_x, float camera_y) {
+    for (int y = 0; y < m_config.map.height; ++y) {
+        for (int x = 0; x < m_config.map.width; ++x) {
+            int index = y * m_config.map.width + x;
 
-    m_dialogue_box.render(window);
+            if (index < 0 || index >= static_cast<int>(m_config.map.collision.cells.size())) {
+                continue;
+            }
+
+            if (m_config.map.collision.cells[index] == 0) {
+                continue;
+            }
+
+            int dst_x = static_cast<int>(std::lround(x * resolved_tile_size - camera_x));
+            int dst_y = static_cast<int>(std::lround(y * resolved_tile_size - camera_y));
+
+            if (dst_x + resolved_tile_size <= 0 || dst_y + resolved_tile_size <= 0) {
+                continue;
+            }
+
+            if (dst_x >= window.render_width() || dst_y >= window.render_height()) {
+                continue;
+            }
+
+            window.draw_filled_rect(
+                spetra::Color{255, 0, 0, 100},
+                dst_x,
+                dst_y,
+                resolved_tile_size,
+                resolved_tile_size
+            );
+        }
+    }
 }
 
 void MapScene::resolve_movement(spetra::Entity& entity, float dx, float dy) {

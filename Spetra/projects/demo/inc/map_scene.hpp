@@ -9,6 +9,7 @@
 #include "spetra/texture.hpp"
 #include "spetra/dialogue_box.hpp"
 #include "spetra/entity.hpp"
+#include "draw_order.hpp"
 #include "map_data.hpp"
 
 enum class CameraMode {
@@ -39,6 +40,9 @@ private:
     void resolve_movement(spetra::Entity& entity, float dx, float dy);
     void update_camera(const spetra::Window& window, double delta_time);
 
+    void draw_tile_layer(spetra::Window& window, const TileLayer& layer, int tileset_columns, int resolved_tile_size, float camera_x, float camera_y);
+    void draw_collision_debug(spetra::Window& window, int resolved_tile_size, float camera_x, float camera_y);
+
 private:
     Config m_config;
     spetra::Texture m_tileset;
@@ -48,6 +52,8 @@ private:
 
     spetra::Entity m_player;
     std::string m_player_sprite_path = "assets/sprites/player.png";
+
+    std::vector<demo::DrawItem> m_draw_list;
 
     float m_camera_x = 0.0f;
     float m_camera_y = 0.0f;
