@@ -8,6 +8,8 @@
 #include "pause_overlay_scene.hpp"
 #include "battle_stub_scene.hpp"
 #include "menu_scene.hpp"
+#include "condition_eval.hpp"
+#include "map_loader.hpp"
 #include "spetra/input.hpp"
 #include "spetra/scene_manager.hpp"
 #include "spetra/window.hpp"
@@ -15,7 +17,7 @@
 #include "spetra/filesystem.hpp"
 
 MapScene::MapScene(const Config& config)
-: m_config(config) {
+: m_config(config), m_events(*this) {
 }
 
 void MapScene::on_enter(spetra::Window& window) {
@@ -40,6 +42,18 @@ void MapScene::on_enter(spetra::Window& window) {
 
     m_dialogue_box.set_skin_path("assets/ui/textbox.png", 6);
     m_dialogue_box.set_font_path("assets/fonts/dialogue.ttf", 12.0f);
+
+    // Global state for events
+    m_events.set_world(world());
+
+    // Choice menu UI
+    m_ui_theme.set_skin("assets/ui/textbox.png", 6);
+    m_ui_theme.set_font("assets/fonts/dialogue.ttf", 12.0f);
+    m_ui_theme.line_height = 14;
+    m_ui.set_theme(&m_ui_theme);
+
+    // Prevent firing on load
+    m_tile_initialized = false;
 
     // Load GPU resources
     std::string tileset_path = spetra::get_asset_path(m_config.map.tileset_path);
@@ -88,28 +102,26 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
         return;
     }
 
+    // Choice menu owns input while it's open
+    if (m_choice_active) {
+        if (m_choice_ui_built) {
+            m_ui.handle_input(input);
+        }
+        m_move_left = m_move_right = m_move_up = m_move_down = false;
+        return;
+    }
+
     if (input.was_pressed(SDL_SCANCODE_E) || input.was_pressed(SDL_SCANCODE_RETURN)) {
         if (m_dialogue_box.is_active()) {
             m_dialogue_box.advance();
         }
-        else if (!world().variables.flag("demo.seen_intro")) {
-            // First time: play the intro and remember it in global state
-            m_dialogue_box.start({
-                {"Speaker 1", "This is the initial test of Spetra's dialogue system."},
-                {"Speaker 2", "Speaker names can change between dialogue sections."},
-                {"", "Narration can appear without a speaker name as well."}
-            });
-            world().variables.set_flag("demo.seen_intro", true);
-        }
-        else {
-            // The flag persists for the rest of the run, so we branch on it
-            m_dialogue_box.start({
-                {"", "You've already seen the intro (demo.seen_intro is set)."}
-            });
+        else if (!m_events.is_running()) {
+            try_fire_on_interact();
         }
     }
 
-    if (m_dialogue_box.is_active()) {
+    // Lock player input during event
+    if (events_busy()) {
         m_move_left = false;
         m_move_right = false;
         m_move_up = false;
@@ -118,11 +130,42 @@ void MapScene::handle_input(spetra::Input& input, spetra::SceneManager& scene_ma
 }
 
 void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
-    (void)scene_manager;
-
     m_last_delta_time = delta_time;
 
     m_dialogue_box.update(delta_time);
+
+    m_ui.update(delta_time);
+
+    // Advance any running event first
+    m_events.update(delta_time);
+
+    // Apply transitions the runner requested
+    if (m_pending_battle) {
+        m_pending_battle = false;
+        std::cout << "[MapScene] start_battle encounter='" << m_pending_encounter << "'\n";
+        scene_manager.push_scene(std::make_unique<BattleStubScene>());
+        return;
+    }
+
+    if (m_pending_change_map) {
+        m_pending_change_map = false;
+
+        MapData next = load_map_from_json(m_pending_map_path);
+        if (next.width > 0 && next.height > 0) {
+            MapScene::Config cfg;
+            cfg.map = next;
+            cfg.clear_color = m_config.clear_color;
+            if (m_pending_spawn) {
+                cfg.map.spawn_x = m_pending_spawn_x;
+                cfg.map.spawn_y = m_pending_spawn_y;
+            }
+            scene_manager.change_scene(std::make_unique<MapScene>(cfg));
+        }
+        else {
+            std::cerr << "[MapScene] change_map failed: " << m_pending_map_path << '\n';
+        }
+        return;
+    }
 
     float move_x = 0.0f;
     float move_y = 0.0f;
@@ -167,6 +210,26 @@ void MapScene::update(double delta_time, spetra::SceneManager& scene_manager) {
 
     m_player.x = std::clamp(m_player.x, 0.0f, max_x);
     m_player.y = std::clamp(m_player.y, 0.0f, max_y);
+
+    // on_enter triggers
+    int tx = 0;
+    int ty = 0;
+    player_tile(tx, ty);
+
+    if (!m_tile_initialized) {
+        m_prev_tile_x = tx;
+        m_prev_tile_y = ty;
+        m_tile_initialized = true;
+    }
+    else if ((tx != m_prev_tile_x || ty != m_prev_tile_y)) {
+        m_prev_tile_x = tx;
+        m_prev_tile_y = ty;
+
+        if (!events_busy()) {
+            try_fire_on_enter(tx, ty);
+        }
+    }
+
 }
 
 void MapScene::render(spetra::Window& window) {
@@ -242,6 +305,23 @@ void MapScene::render(spetra::Window& window) {
         draw_collision_debug(window, resolved_tile_size, camera_x, camera_y);
     }
     m_dialogue_box.render(window);
+
+    // Choice menu show above dialogue box
+    if (m_choice_pending) {
+        m_choice_pending = false;
+        build_choice_ui(window);
+    }
+    if (m_choice_active && m_choice_ui_built) {
+        m_ui.render(window);
+    }
+
+    if (!m_choice_active && m_choice_ui_built) {
+        m_ui.clear();
+        m_choice_panel = nullptr;
+        m_choice_menu = nullptr;
+        m_choice_ui_built = false;
+    }
+
 }
 
 void MapScene::draw_tile_layer(spetra::Window& window, const TileLayer& layer, int tileset_columns, int resolved_tile_size, float camera_x, float camera_y) {
@@ -315,6 +395,179 @@ void MapScene::draw_collision_debug(spetra::Window& window, int resolved_tile_si
             );
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// demo::EventHost
+// ---------------------------------------------------------------------------
+
+void MapScene::start_dialogue(const std::vector<spetra::DialogueLine>& lines) {
+    m_dialogue_box.start(lines);
+}
+
+bool MapScene::is_dialogue_active() const {
+    return m_dialogue_box.is_active();
+}
+
+void MapScene::start_choice(const std::vector<std::string>& options) {
+    std::vector<spetra::ui::MenuItem> items;
+    items.reserve(options.size());
+    for (const std::string& text : options) {
+        items.push_back(spetra::ui::MenuItem{text, true, ""});
+    }
+
+    m_choice_items = items;
+    m_choice_pending = true;   // UI is built on the next render (needs a Window)
+    m_choice_active = true;
+    m_choice_result = -1;
+}
+
+bool MapScene::is_choice_active() const {
+    return m_choice_active;
+}
+
+int MapScene::choice_result() const {
+    return m_choice_result;
+}
+
+void MapScene::request_change_map(const std::string& map_path,
+                                  bool has_spawn, float spawn_x, float spawn_y) {
+    m_pending_change_map = true;
+    m_pending_map_path = map_path;
+    m_pending_spawn = has_spawn;
+    m_pending_spawn_x = spawn_x;
+    m_pending_spawn_y = spawn_y;
+}
+
+void MapScene::request_battle(const std::string& encounter) {
+    m_pending_battle = true;
+    m_pending_encounter = encounter;
+}
+
+void MapScene::set_camera_mode(const std::string& mode) {
+    if (mode == "cutscene") {
+        m_camera_mode = CameraMode::Cutscene;
+    }
+    else if (mode == "manual") {
+        m_camera_mode = CameraMode::Manual;
+    }
+    else {
+        m_camera_mode = CameraMode::FollowPlayer;
+    }
+}
+
+// Trigger firing
+
+bool MapScene::events_busy() const {
+    return m_events.is_running() || m_dialogue_box.is_active() || m_choice_active;
+}
+
+void MapScene::player_tile(int& tile_x, int& tile_y) const {
+    int ts = tile_size();
+    if (ts <= 0) { tile_x = 0; tile_y = 0; return; }
+
+    // Centre of the collision box is player location
+    tile_x = static_cast<int>(m_player.x + m_player.size / 2.0f) / ts;
+    tile_y = static_cast<int>(m_player.y + m_player.size / 2.0f) / ts;
+}
+
+void MapScene::facing_tile(int& tile_x, int& tile_y) const {
+    player_tile(tile_x, tile_y);
+
+    switch (m_player.direction) {
+        case spetra::Direction::Up:    --tile_y; break;
+        case spetra::Direction::Down:  ++tile_y; break;
+        case spetra::Direction::Left:  --tile_x; break;
+        case spetra::Direction::Right: ++tile_x; break;
+    }
+}
+
+bool MapScene::trigger_available(const Trigger& trigger) const {
+    if (trigger.once && !trigger.id.empty()) {
+        if (world().variables.flag(
+                demo::EventRunner::fired_key(m_config.map.name, trigger.id))) {
+            return false;
+        }
+    }
+
+    return demo::evaluate(trigger.condition, world().variables);
+}
+
+bool MapScene::try_fire_on_enter(int tile_x, int tile_y) {
+    for (const Trigger& trigger : m_config.map.triggers) {
+        if (trigger.fire_mode != FireMode::OnEnter) {
+            continue;
+        }
+        if (!trigger.region.contains_tile(tile_x, tile_y)) {
+            continue;
+        }
+        if (!trigger_available(trigger)) {
+            continue;
+        }
+
+        m_events.run_trigger(trigger, m_config.map.name);
+        return true;
+    }
+
+    return false;
+}
+
+bool MapScene::try_fire_on_interact() {
+    int tx = 0;
+    int ty = 0;
+    facing_tile(tx, ty);
+
+    for (const Trigger& trigger : m_config.map.triggers) {
+        if (trigger.fire_mode != FireMode::OnInteract) {
+            continue;
+        }
+        if (!trigger.region.contains_tile(tx, ty)) {
+            continue;
+        }
+        if (!trigger_available(trigger)) {
+            continue;
+        }
+
+        m_events.run_trigger(trigger, m_config.map.name);
+        return true;
+    }
+
+    return false;
+}
+
+void MapScene::build_choice_ui(spetra::Window& window) {
+    m_ui.clear();
+    m_choice_panel = nullptr;
+    m_choice_menu = nullptr;
+
+    int rw = window.render_width();
+
+    // Show choice box above the dialogue box
+    int pw = 110;
+    int ph = static_cast<int>(m_choice_items.size()) * m_ui_theme.line_height + 16;
+    int px = rw - pw - 16;
+    int py = window.render_height() - 58 - 12 - ph - 4;
+
+    auto panel = std::make_unique<spetra::ui::Panel>();
+    panel->rect = spetra::ui::Rect{px, py, pw, ph};
+    panel->instant();
+    m_choice_panel = static_cast<spetra::ui::Panel*>(m_ui.add(std::move(panel)));
+
+    auto menu = std::make_unique<spetra::ui::ListMenu>();
+    menu->rect = spetra::ui::Rect{px + 8, py + 8, pw - 16, 0};
+    menu->set_items(m_choice_items);
+
+    m_choice_menu = static_cast<spetra::ui::ListMenu*>(
+        m_choice_panel->add_child(std::move(menu)));
+
+    m_choice_menu->on_select = [this](int index) {
+        m_choice_result = index;
+        m_choice_active = false;
+    };
+
+    m_ui.set_focus(m_choice_menu);
+    m_ui.layout();
+    m_choice_ui_built = true;
 }
 
 void MapScene::resolve_movement(spetra::Entity& entity, float dx, float dy) {

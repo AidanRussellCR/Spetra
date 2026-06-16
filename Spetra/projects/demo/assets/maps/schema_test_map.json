@@ -67,76 +67,172 @@
 
   "triggers": [
     {
-      "id": "chest_01",
-      "region": { "x": 2, "y": 2, "w": 1, "h": 1 },
-      "fire_mode": "on_interact",
-      "once": true,
-      "condition": { "flag": "has_key", "equals": true },
-      "actions": [
-        {
-          "type": "dialogue",
-          "lines": [
-            { "speaker": "", "text": "The chest creaks open." }
-          ]
-        },
-        { "type": "set_flag", "key": "chest_01_open", "value": true },
-        { "type": "give_item", "item": "potion", "count": 1 }
-      ]
-    },
-    {
-      "id": "gate_cutscene",
-      "region": { "x": 4, "y": 1, "w": 2, "h": 1 },
-      "fire_mode": "on_enter",
-      "once": true,
-      "condition": {
-        "all": [
-          { "flag": "chest_01_open" },
-          { "int": "gold", "op": ">=", "value": 50 }
-        ]
+      "id": "sign_01",
+      "region": {
+        "x": 2,
+        "y": 2,
+        "w": 1,
+        "h": 1
       },
-      "actions": [
-        {
-          "type": "dialogue",
-          "lines": [
-            { "speaker": "Guard", "text": "Hold there. You've earned passage." }
-          ]
-        },
-        { "type": "set_flag", "key": "gate_open", "value": true }
-      ]
-    },
-    {
-      "id": "npc_guard_talk",
-      "region": { "x": 5, "y": 3, "w": 1, "h": 1 },
       "fire_mode": "on_interact",
       "once": false,
       "actions": [
         {
           "type": "dialogue",
           "lines": [
-            { "speaker": "Guard", "text": "Nothing to report." }
+            {
+              "speaker": "Sign",
+              "text": "A weathered signpost. It reads: press E facing me."
+            }
           ]
+        }
+      ]
+    },
+    {
+      "id": "chest_01",
+      "region": {
+        "x": 5,
+        "y": 2,
+        "w": 1,
+        "h": 1
+      },
+      "fire_mode": "on_interact",
+      "once": true,
+      "actions": [
+        {
+          "type": "dialogue",
+          "lines": [
+            {
+              "speaker": "",
+              "text": "A chest! Open it?"
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "store": "demo.last_choice",
+          "options": [
+            {
+              "text": "Open",
+              "actions": [
+                {
+                  "type": "dialogue",
+                  "lines": [
+                    {
+                      "speaker": "",
+                      "text": "You found 2 potions."
+                    }
+                  ]
+                },
+                {
+                  "type": "give_item",
+                  "item": "potion",
+                  "count": 2
+                },
+                {
+                  "type": "set_flag",
+                  "key": "chest_01_open",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "text": "Leave",
+              "actions": [
+                {
+                  "type": "dialogue",
+                  "lines": [
+                    {
+                      "speaker": "",
+                      "text": "You leave it alone."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gate_cutscene",
+      "region": {
+        "x": 3,
+        "y": 4,
+        "w": 2,
+        "h": 1
+      },
+      "fire_mode": "on_enter",
+      "once": true,
+      "condition": {
+        "flag": "chest_01_open",
+        "equals": true
+      },
+      "actions": [
+        {
+          "type": "camera_mode",
+          "mode": "cutscene"
+        },
+        {
+          "type": "dialogue",
+          "lines": [
+            {
+              "speaker": "Guard",
+              "text": "You opened the chest. Passage granted."
+            }
+          ]
+        },
+        {
+          "type": "wait",
+          "seconds": 0.4
+        },
+        {
+          "type": "dialogue",
+          "lines": [
+            {
+              "speaker": "Guard",
+              "text": "Go on through."
+            }
+          ]
+        },
+        {
+          "type": "set_flag",
+          "key": "gate_open",
+          "value": true
+        },
+        {
+          "type": "camera_mode",
+          "mode": "follow"
+        }
+      ]
+    },
+    {
+      "id": "battle_tile",
+      "region": {
+        "x": 6,
+        "y": 4,
+        "w": 1,
+        "h": 1
+      },
+      "fire_mode": "on_enter",
+      "once": false,
+      "actions": [
+        {
+          "type": "dialogue",
+          "lines": [
+            {
+              "speaker": "",
+              "text": "Something lunges from the grass!"
+            }
+          ]
+        },
+        {
+          "type": "start_battle",
+          "encounter": "slime_pack"
         }
       ]
     }
   ],
 
-  "actors": [
-    {
-      "id": "npc_guard",
-      "sprite": "assets/sprites/player.png",
-      "spawn": { "x": 48.0, "y": 48.0 },
-      "behavior": "patrol",
-      "path": [
-        { "x": 5, "y": 3 },
-        { "x": 5, "y": 4 },
-        { "x": 3, "y": 4 }
-      ],
-      "interaction": "npc_guard_talk",
-      "size": 12,
-      "speed": 30.0,
-      "frame_width": 16,
-      "frame_height": 16,
-      "frame_count": 4
-    }
-  ]
+  "actors": []
 }

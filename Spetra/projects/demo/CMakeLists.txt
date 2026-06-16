@@ -6,6 +6,8 @@ add_executable(demo
     src/map_loader.cpp
     src/map_data.cpp
     src/draw_order.cpp
+    src/condition_eval.cpp
+    src/event_runner.cpp
     src/pause_overlay_scene.cpp
     src/battle_stub_scene.cpp
     src/menu_scene.cpp
@@ -45,3 +47,23 @@ target_include_directories(draw_order_test
 )
 
 add_test(NAME draw_order COMMAND draw_order_test)
+
+# Event system
+add_executable(event_test
+    tests/event_test.cpp
+    src/event_runner.cpp
+    src/condition_eval.cpp
+)
+
+target_include_directories(event_test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+target_link_libraries(event_test
+    PRIVATE
+        spetra
+        nlohmann_json::nlohmann_json
+)
+
+add_test(NAME events COMMAND event_test)
